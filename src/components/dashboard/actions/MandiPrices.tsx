@@ -3,6 +3,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-re
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,16 +30,43 @@ export function MandiPrices({ onClose }: MandiPricesProps) {
   const [insights, setInsights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [selectedState, setSelectedState] = useState('Maharashtra');
+  const [selectedDistrict, setSelectedDistrict] = useState('Pune');
+
+  const states = [
+    { value: 'Maharashtra', label: 'Maharashtra' },
+    { value: 'Punjab', label: 'Punjab' },
+    { value: 'Haryana', label: 'Haryana' },
+    { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
+    { value: 'Rajasthan', label: 'Rajasthan' },
+    { value: 'Karnataka', label: 'Karnataka' },
+    { value: 'Tamil Nadu', label: 'Tamil Nadu' },
+    { value: 'Andhra Pradesh', label: 'Andhra Pradesh' }
+  ];
+
+  const getDistrictsForState = (state: string) => {
+    const districtMap: { [key: string]: string[] } = {
+      'Maharashtra': ['Pune', 'Mumbai', 'Nashik', 'Kolhapur', 'Akola'],
+      'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala'],
+      'Haryana': ['Gurugram', 'Faridabad', 'Karnal', 'Hisar'],
+      'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Agra', 'Meerut'],
+      'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Udaipur'],
+      'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore'],
+      'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem'],
+      'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Tirupati']
+    };
+    return districtMap[state] || [];
+  };
 
   useEffect(() => {
     fetchPrices();
-  }, []);
+  }, [selectedState, selectedDistrict]);
 
   const fetchPrices = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('mandi-prices', {
-        body: { state: 'Maharashtra', district: 'Pune' }
+        body: { state: selectedState, district: selectedDistrict }
       });
 
       if (error) throw error;
@@ -89,6 +117,43 @@ export function MandiPrices({ onClose }: MandiPricesProps) {
         <Button variant="outline" size="sm" onClick={fetchPrices} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
+      </div>
+
+      {/* Location Selector */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">State</label>
+          <Select value={selectedState} onValueChange={(value) => {
+            setSelectedState(value);
+            setSelectedDistrict(getDistrictsForState(value)[0] || '');
+          }}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map(state => (
+                <SelectItem key={state.value} value={state.value}>
+                  {state.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-2 block">District</label>
+          <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {getDistrictsForState(selectedState).map(district => (
+                <SelectItem key={district} value={district}>
+                  {district}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
